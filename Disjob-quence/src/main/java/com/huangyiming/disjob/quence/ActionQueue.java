@@ -2,13 +2,11 @@ package com.huangyiming.disjob.quence;
 
 import java.util.Queue;
 
-public interface ActionQueue {
+public interface ActionQueue extends Runnable {
 
 	public ActionQueue getActionQueue();
 
 	public void enqueue(Action action);
-
-	public void dequeue(Action action);
 
 	public void clear();
 
