@@ -18,17 +18,16 @@ public abstract class Action implements Runnable {
 		this.queue = queue;
 		createTime = System.currentTimeMillis();
 	}
-	
+
 	public void setActionQueue(ActionQueue queue){
 		this.queue = queue;
 	}
-	
+
 	public ActionQueue getActionQueue() {
 		return queue;
-	}   
+	}
 
 	public void run() {
-		
 		if (queue != null) {
 			long start = System.currentTimeMillis();
 			try {
@@ -40,11 +39,9 @@ public abstract class Action implements Runnable {
 					System.err.println("execute action : " + this.toString() + ", interval : " + interval + ", leftTime : " + leftTime + ", size : " + queue.getQueue().size());
 					Log.warn("execute action : " + this.toString() + ", interval : " + interval + ", leftTime : " + leftTime + ", size : " + queue.getQueue().size());
 				}
-			} catch (Exception e) {
+			} catch (Throwable e) {
 				e.printStackTrace();
 				Log.error("run action execute exception. action : " + this.toString()+e.getMessage());
-			} finally {
-				queue.dequeue(this);
 			}
 		}
 	}

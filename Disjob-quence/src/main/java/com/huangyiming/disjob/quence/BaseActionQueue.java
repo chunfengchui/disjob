@@ -15,6 +15,9 @@ public class BaseActionQueue implements ActionQueue {
 	private Queue<Action> queue;
 	private Executor executor;
 	private ReentrantLock lock = new ReentrantLock();
+
+	private volatile boolean isExecute=false;
+
 	public BaseActionQueue(Executor executor) {
 		this.executor = executor;
 		queue = new LinkedList<Action>();
@@ -34,53 +37,22 @@ public class BaseActionQueue implements ActionQueue {
 	}
 
 	public void enqueue(Action action) {
-		int queueSize = 0;
-		if(action.getActionQueue() == null){
-			action.setActionQueue(this);
-		}
 		lock.lock();
 		try{
 			queue.add(action);
-			queueSize = queue.size();
+			int queueSize = queue.size();
+			if (queueSize > 4 * Runtime.getRuntime().availableProcessors()) {
+				Log.warn(action.toString() + " queue size : " + queueSize);
+			}
+			if(isExecute)
+				return;
+			executor.execute(this);
+			isExecute=true;
 		}finally{
 			lock.unlock();
 		}
-		if (queueSize == 1) {
-			executor.execute(action);
-		}
-		if (queueSize > 4 * Runtime.getRuntime().availableProcessors()) {
-			 Log.warn(action.toString() + " queue size : " + queueSize);
-		}
 	}
 
-	public void dequeue(Action action) {
-		Action nextAction = null;
-		int queueSize = 0;
-		String tmpString = null;
-		lock.lock();
-		try{
-			queueSize = queue.size();
-			Action temp = queue.remove();
-			if (temp != action) {
-				tmpString = temp.toString();
-			}
-			if (queueSize != 0) {
-				nextAction = queue.peek();
-			}
-		}finally{
-			lock.unlock();
-		}
-
-		if (nextAction != null) {
-			executor.execute(nextAction);
-		}
-		if (queueSize == 0) {
-			 Log.debug("queue.size() is 0.");
-		}
-		if (tmpString != null) {
-			 Log.debug("action queue error. temp " + tmpString + ", action : " + action.toString());
-		}
-	}
 
 	public void clear() {
 		lock.lock();
@@ -88,6 +60,23 @@ public class BaseActionQueue implements ActionQueue {
 			queue.clear();
 		}finally{
 			lock.unlock();
+		}
+	}
+
+	public void run() {
+		Action action;
+		for(;;){
+			lock.lock();
+			try {
+				action = queue.poll();
+				if(action==null){
+					isExecute = false;
+					return;
+				}
+			}finally {
+				lock.unlock();
+			}
+			action.run();
 		}
 	}
 }
